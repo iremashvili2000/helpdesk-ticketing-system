@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>Help Desk Chat Test</h2>
+<input type="text" id="token" placeholder="ჩაწერე JWT ტოკენი აქ" style="width: 300px;"><br><br>
+<button onclick="connect()">დაკავშირება (Connect)</button>
+<hr>
+<input type="text" id="receiver" placeholder="ვის ვწერთ? (username)">
+<input type="text" id="message" placeholder="მესიჯი...">
+<button onclick="sendMessage()">გაგზავნა</button>
+<ul id="messages"></ul>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var token = document.getElementById('token').value;
+        var socket = new SockJS('http://localhost:8080/ws-chat'); // შენი პორტი
+        stompClient = Stomp.over(socket);
+
+        var headers = { 'Authorization': 'Bearer ' + token };
+
+        stompClient.connect(headers, function (frame) {
+            console.log('Connected: ' + frame);
+
+            // გამოწერა: უსმენს პირად მესიჯებს
+            stompClient.subscribe('/user/queue/messages', function (msg) {
+                var chatMsg = JSON.parse(msg.body);
+                showMarker(chatMsg.sender + ": " + chatMsg.content);
+            });
+        }, function(error) {
+            alert("შეცდომა დაკავშირებისას: " + error);
+        });
+    }
+
+    function sendMessage() {
+        var receiver = document.getElementById('receiver').value;
+        var content = document.getElementById('message').value;
+        var chatMessage = { receiver: receiver, content: content };
+
+        stompClient.send("/app/chat.send", {}, JSON.stringify(chatMessage));
+        showMarker("მე: " + content);
+    }
+
+    function showMarker(msg) {
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(msg));
+        document.getElementById("messages").appendChild(li);
+    }
+</script>
+</body>
+</html>
